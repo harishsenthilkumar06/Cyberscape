@@ -106,7 +106,7 @@ function checkTowerDetection() {
     for (let i = 0; i < towerArray.length; i++) {
         let tower = towerArray[i];
         if (getDistance(player1.x, player1.y, tower.x + tileSize / 2, tower.y + tileSize / 2) < tower.radius + player1.radius && tower.angle - Math.PI / 6 < getAngle(player1, tower) + Math.PI && getAngle(player1, tower) + Math.PI < tower.angle + Math.PI / 6) {
-            console.log("Player detected by tower");
+            console.log(tower.angle);
         }
     }
 }
@@ -120,7 +120,7 @@ function getDistance(x1, y1, x2, y2) {
 }
 
 function getAngle(player, tower) {
-    return Math.atan2(player.y - (tower.y + tileSize / 2), player.x - (tower.x + tileSize / 2)) + Math.PI;
+    return Math.atan2(tower.y + tileSize / 2 - player.y, tower.x + tileSize / 2 - player.x);
 }
 
 let bluex = Math.floor(Math.random() * cols);
