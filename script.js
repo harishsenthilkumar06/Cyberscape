@@ -41,7 +41,7 @@ function bullet(px, py, player, tower) {
     this.player = player;
     this.tower = tower;
     this.radius = 2;
-    bulletSpeed = 2;
+    let bulletSpeed = 2.05;
 
     this.draw = function() {
         ctxAnimated.beginPath();
@@ -52,8 +52,9 @@ function bullet(px, py, player, tower) {
 
     this.update = function() {
         if (isPaused) return;
-        dx = bulletSpeed
-        dy = bulletSpeed * (this.tower.y + tileSize / 2 - this.player.y) / (this.tower.x + tileSize / 2 - this.player.x);
+        let denominator = getDistance(this.player.x, this.player.y, this.x, this.y);
+        this.dx = (bulletSpeed * (this.player.x - this.x)) / denominator; 
+        this.dy = (bulletSpeed * (this.player.y - this.y)) / denominator;
         this.x += this.dx;
         this.y += this.dy;
         this.draw();
@@ -69,7 +70,7 @@ function player(px, py, dx, dy) {
 
     this.draw = function() {
         ctxAnimated.beginPath();
-        ctxAnimated.arc(this.x, this.y, 5, 0, 2 * Math.PI);
+        ctxAnimated.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
         ctxAnimated.fillStyle = 'white';
         ctxAnimated.fill();
     }
@@ -100,13 +101,34 @@ function checkBuildingCollision() {
                 if (player1.y > block.y + block.height) player1.dy = Math.max(player1.dy, 0);
         }
     }
+    if (player1.x < player1.radius) player1.x = player1.radius;
+    if (player1.x > canvasAnimated.width - player1.radius) player1.x = canvasAnimated.width - player1.radius;
+    if (player1.y < player1.radius) player1.y = player1.radius;
+    if (player1.y > canvasAnimated.height - player1.radius) player1.y = canvasAnimated.height - player1.radius;
 }
-
+let counter = 0;
 function checkTowerDetection() {
     for (let i = 0; i < towerArray.length; i++) {
         let tower = towerArray[i];
         if (getDistance(player1.x, player1.y, tower.x + tileSize / 2, tower.y + tileSize / 2) < tower.radius + player1.radius && tower.angle - Math.PI / 6 < getAngle(player1, tower) + Math.PI && getAngle(player1, tower) + Math.PI < tower.angle + Math.PI / 6) {
-            console.log(tower.angle);
+            console.log("Player is in tower detection range");
+            if (counter % 10 === 0) {
+                console.log("Bullet fired");
+                let bulletInstance = new bullet(tower.x + tileSize/2, tower.y + tileSize/2, player1, tower);
+                bulletArray.push(bulletInstance);
+                bulletInstance.draw();
+            };
+            counter++;
+        }
+    }
+}
+
+function checkBulletCollision(){
+    for (let i = 0; i < bulletArray.length; i++) {
+        let bullet = bulletArray[i];
+        if (getDistance(bullet.x, bullet.y, player1.x, player1.y) < bullet.radius + player1.radius) {
+            bulletArray.splice(i, 1);
+            i--;
         }
     }
 }
@@ -208,6 +230,8 @@ addEventListener('keyup', function(event) {
     }    
 });
 
+let timer = 0;
+
 function animate() {
     if (isPaused) return;
     
@@ -239,8 +263,14 @@ function animate() {
     checkBuildingCollision();
     checkTowerDetection();
 
-    player1.update();
+    if (timer % 300 == 0) bulletArray.shift(); // Remove the first bullet every second
 
+    for (let i = 0; i < bulletArray.length; i++) {
+        bulletArray[i].update();
+    }
+    checkBulletCollision();
+    player1.update();
+    timer++;
     requestAnimationFrame(animate);
 }
 
