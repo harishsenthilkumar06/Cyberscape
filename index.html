@@ -8,8 +8,41 @@
 </head>
 
 <body onresize = "location.reload()">
-<canvas id="canvasStatic"></canvas>
-<canvas id="canvasAnimated"></canvas>
+    <div id = "scoreBox">
+        <div>
+            <h1>Score: <span id="score">0</span></h1>
+        </div>
+
+        <div>
+            <h1>System Health: <span id="sysHealth">1000</span></h1>
+        </div>
+
+        <div>
+            <h1>Player Health: <span id="playerHealth">100</span></h1>
+        </div>
+
+        <div>
+            <h1>Keys Held: <span id="playerKeys">0</span></h1>
+        </div>
+        <div>
+            <h1>Keys Delivered: <span id="decryptedKeys">0</span></h1>
+        </div>
+    </div>
+
+    <canvas id="canvasStatic"></canvas>
+    <canvas id="canvasAnimated"></canvas>
+
+    <div id = "gameOverBox" style="display: none;">
+        <h1>Game Over</h1>
+        <button class="button" id="restartButton" onclick = "location.reload()">Restart</button>
+    </div>
+
+    <div id="controls">
+        <button class="button" id="pause" onclick = "pause()">Pause</button>
+        <button class="button" id="resume" onclick = "resume()">Resume</button>
+        <button class="button" id="reset" onclick = "location.reload()">Reset</button>
+    </div>  
+
 </body>
 
 <script src="script.js"></script>

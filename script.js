@@ -12,7 +12,7 @@ const cols = Math.floor(canvas.width/150);
 const rows = (canvas.height / (canvas.width / cols)) - 1;
 const tileSize = canvas.width / cols;
 let isPaused = false;
-let sysHealth = 1000;
+let sysHealth = 5000;
 let score = 0;
 
 function towerArc(px, py, radius, angle) {
@@ -131,6 +131,10 @@ function checkBuildingCollision() {
                     player1.decryptedKeys += player1.keys;
                     player1.keys = 0;
                     console.log("Keys decrypted: " + player1.decryptedKeys);
+                    if (player1.decryptedKeys >= 5) {
+                        sysHealth = 5000;
+                        player1.decryptedKeys -= 5;
+                    }
                 }
         }
     }
@@ -353,13 +357,23 @@ function animate() {
 
     checkBulletCollision();
     checkShardCollision();
-    if (player1.health <= 0) {
-        alert("Game Over! You have been defeated.");
+    if (player1.health <= 0 || sysHealth <= 0) {
+        isPaused = true;
+        document.getElementById('gameOverBox').style.display = 'block';
         return;
     }
     player1.update();
-    sysHealth -= 0.1;
+    sysHealth -= 0.5;
+    score += 1;
     timer++;
+
+    if (timer % 20 == 0){
+        document.getElementById('score').innerText = `${score}`;
+        document.getElementById('playerHealth').innerText = `${player1.health}`;
+        document.getElementById('sysHealth').innerText = `${sysHealth}`;
+        document.getElementById('playerKeys').innerText = `${player1.keys}`;
+        document.getElementById('decryptedKeys').innerText = `${player1.decryptedKeys}`;
+    }
     requestAnimationFrame(animate);
 }
 
@@ -386,7 +400,7 @@ function pause() {
 
 function resume() {
   isPaused = false;
-  generateMap(); // or start animation loop if you add movement later
+  animate(); 
 }
 
 generateMap();
