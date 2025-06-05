@@ -12,6 +12,8 @@ const cols = Math.floor(canvas.width/150);
 const rows = (canvas.height / (canvas.width / cols)) - 1;
 const tileSize = canvas.width / cols;
 let isPaused = false;
+let sysHealth = 1000;
+let score = 0;
 
 function towerArc(px, py, radius, angle) {
     this.x = px;
@@ -71,6 +73,9 @@ function player(px, py, dx, dy) {
     this.dx = dx;
     this.dy = dy;
     this.radius = 5;
+    this.keys = 0;
+    this.decryptedKeys = 0;
+    this.health = 100;
 
     this.draw = function() {
         ctxAnimated.beginPath();
@@ -87,11 +92,12 @@ function player(px, py, dx, dy) {
     }
 }
 
-function buildingBlock(px, py, bw, bh) {
+function buildingBlock(px, py, bw, bh, isBlue) {
     this.x = px;
     this.y = py;
     this.width = bw;
     this.height = bh;
+    this.isBlueBuilding = isBlue;
 }
 
 function shard(px, py, radius) {
@@ -102,7 +108,7 @@ function shard(px, py, radius) {
     this.draw = function() {
         ctxAnimated.beginPath();
         ctxAnimated.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
-        ctxAnimated.fillStyle = 'pink';
+        ctxAnimated.fillStyle = 'deepPink';
         ctxAnimated.fill();
     }
 
@@ -121,6 +127,11 @@ function checkBuildingCollision() {
                 if (player1.x > block.x + block.width) player1.dx = Math.max(player1.dx, 0); 
                 if (player1.y < block.y) player1.dy = Math.min(player1.dy, 0);
                 if (player1.y > block.y + block.height) player1.dy = Math.max(player1.dy, 0);
+                if (block.isBlueBuilding) {
+                    player1.decryptedKeys += player1.keys;
+                    player1.keys = 0;
+                    console.log("Keys decrypted: " + player1.decryptedKeys);
+                }
         }
     }
     if (player1.x < player1.radius) player1.x = player1.radius;
@@ -145,11 +156,48 @@ function checkTowerDetection() {
     }
 }
 
+let bulletDamage = 10;
+
 function checkBulletCollision(){
     for (let i = 0; i < bulletArray.length; i++) {
         let bullet = bulletArray[i];
         if (getDistance(bullet.x, bullet.y, player1.x, player1.y) < bullet.radius + player1.radius) {
+            player1.health -= bulletDamage; // Decrease health by 10
             bulletArray.splice(i, 1);
+            i--;
+        }
+    }
+}
+
+function generateShard(px, py) {
+    var shardPlaced = false;
+    while (!shardPlaced) {
+        let validPlacement = true;
+        var xAttempt = Math.random() * tileSize + px;
+        var yAttempt = Math.random() * tileSize + py;
+        for (let i = 0; i < buildingBlockArray.length; i++) {
+            let block = buildingBlockArray[i];
+            if (xAttempt + shardRadius > block.x && xAttempt - shardRadius < block.x + block.width &&
+                yAttempt + shardRadius > block.y && yAttempt - shardRadius < block.y + block.height) {
+                    validPlacement = false;
+                    break;
+            }
+        }
+        if (validPlacement) {
+            let shardInstance = new shard(xAttempt, yAttempt, shardRadius);
+            shardArray.push(shardInstance);
+            shardInstance.draw();
+            shardPlaced = true;
+        }
+    }
+}
+
+function checkShardCollision(){
+    for (let i = 0; i < shardArray.length; i++) {
+        let shard = shardArray[i];
+        if (getDistance(shard.x, shard.y, player1.x, player1.y) < shard.radius + player1.radius) {
+            player1.keys++;
+            shardArray.splice(i, 1);
             i--;
         }
     }
@@ -185,17 +233,19 @@ function drawTile(x, y) {
     ctx.strokeRect(px, py, tileSize, tileSize);
 
     if (!isBlueZone) {
-            for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 5; i++) {
             ctx.fillStyle = 'black';
             let bw = rand(tileSize/5, tileSize/3);
             let bh = rand(tileSize/5, tileSize/3);
             let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
             let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
             ctx.fillRect(bx, by, bw, bh);
-            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh)); 
+            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh, false));
         }
-        
         towerArray.push(new towerArc(px, py, tileSize / 2, Math.random() * 2 * Math.PI));
+        if (Math.random() < 0.2) {
+            generateShard(px, py);
+        } 
     }
 
     else {        
@@ -206,36 +256,13 @@ function drawTile(x, y) {
             let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
             let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
             ctx.fillRect(bx, by, bw, bh);
-            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh));
+            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh, true));
         }
         ctx.beginPath();
         ctx.arc(px + tileSize / 2, py + tileSize / 2, 10, 0, 2 * Math.PI);
         ctx.fillStyle = 'blue';
         ctx.fill();
         baseStation = 1;
-    }
-
-    if (Math.random() < 0.2 && !isBlueZone) {
-        var shardPlaced = false;
-        while (!shardPlaced) {
-            let validPlacement = true;
-            var xAttempt = Math.random() * tileSize + px;
-            var yAttempt = Math.random() * tileSize + py;
-            for (let i = 1; i <= 5; i++) {
-                let block = buildingBlockArray[buildingBlockArray.length - i];
-                if (xAttempt + shardRadius > block.x && xAttempt - shardRadius < block.x + block.width &&
-                    yAttempt + shardRadius > block.y && yAttempt - shardRadius < block.y + block.height) {
-                            validPlacement = false;
-                            break;
-                }
-            }
-            if (validPlacement) {
-                let shardInstance = new shard(xAttempt, yAttempt, shardRadius);
-                shardArray.push(shardInstance);
-                shardInstance.draw();
-                shardPlaced = true;
-            }
-        }
     }
 }
 
@@ -309,6 +336,12 @@ function animate() {
     checkTowerDetection();
 
     if (timer % 300 == 0) bulletArray.shift(); // Remove the first bullet every second
+    if (timer % 600 == 0 && shardArray.length < 10) {
+        px = Math.floor(Math.random() * cols) * tileSize;
+        py = Math.floor(Math.random() * rows) * tileSize;
+        generateShard(px, py);
+        console.log("Shard generated");
+    }
 
     for (let i = 0; i < bulletArray.length; i++) {
         bulletArray[i].update();
@@ -319,7 +352,13 @@ function animate() {
     }
 
     checkBulletCollision();
+    checkShardCollision();
+    if (player1.health <= 0) {
+        alert("Game Over! You have been defeated.");
+        return;
+    }
     player1.update();
+    sysHealth -= 0.1;
     timer++;
     requestAnimationFrame(animate);
 }
