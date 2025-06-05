@@ -359,6 +359,11 @@ function animate() {
     checkShardCollision();
     if (player1.health <= 0 || sysHealth <= 0) {
         isPaused = true;
+        document.getElementById('finalScore').innerText = `${score}`;
+        document.getElementById('highScore').innerText = `${localStorage.getItem('highScore')}`;
+        if (score > localStorage.getItem('highScore')) {
+            localStorage.setItem('highScore', score);
+        }
         document.getElementById('gameOverBox').style.display = 'block';
         return;
     }
