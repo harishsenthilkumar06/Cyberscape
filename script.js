@@ -3,10 +3,14 @@ const canvasAnimated = document.getElementById('canvasAnimated');
 const ctx = canvas.getContext('2d');
 const ctxAnimated = canvasAnimated.getContext('2d');
 
+canvas.width = innerWidth;
+canvas.height = innerHeight;
+canvasAnimated.width = innerWidth;
+canvasAnimated.height = innerHeight;
 
-const cols = 8;
-const rows = 6;
-const tileSize = 100;
+const cols = Math.floor(canvas.width/150);
+const rows = (canvas.height / (canvas.width / cols)) - 1;
+const tileSize = canvas.width / cols;
 let isPaused = false;
 
 function towerArc(px, py, radius, angle) {
@@ -90,6 +94,24 @@ function buildingBlock(px, py, bw, bh) {
     this.height = bh;
 }
 
+function shard(px, py, radius) {
+    this.x = px;
+    this.y = py;
+    this.radius = radius;
+
+    this.draw = function() {
+        ctxAnimated.beginPath();
+        ctxAnimated.arc(this.x, this.y, this.radius, 0, 2 * Math.PI);
+        ctxAnimated.fillStyle = 'pink';
+        ctxAnimated.fill();
+    }
+
+    this.update = function() {
+        if (isPaused) return;
+        this.draw();
+    }
+}
+
 function checkBuildingCollision() {
     for (let i = 0; i < buildingBlockArray.length; i++) {
         let block = buildingBlockArray[i];
@@ -149,49 +171,72 @@ let bluex = Math.floor(Math.random() * cols);
 let bluey = Math.floor(Math.random() * rows); 
 
 function drawTile(x, y) {
-  const px = x * tileSize;
-  const py = y * tileSize;
-  console.log(bluex, bluey);
-  let isBlueZone = ((x == bluex) && (y == bluey));
-  ctx.fillStyle = isBlueZone ? 'deepskyblue' : 'lime';
-  ctx.lineWidth = tileSize / 5;
-  ctx.strokeStyle = 'black';
-  ctx.fillRect(px, py, tileSize, tileSize);
-  ctx.strokeRect(px, py, tileSize, tileSize);
-  ctx.lineWidth = tileSize / 50;
-  ctx.strokeStyle = 'lime';
-  ctx.strokeRect(px, py, tileSize, tileSize);
+    const px = x * tileSize;
+    const py = y * tileSize;
+    console.log(bluex, bluey);
+    let isBlueZone = ((x == bluex) && (y == bluey));
+    ctx.fillStyle = isBlueZone ? 'deepskyblue' : 'lime';
+    ctx.lineWidth = tileSize / 5;
+    ctx.strokeStyle = 'black';
+    ctx.fillRect(px, py, tileSize, tileSize);
+    ctx.strokeRect(px, py, tileSize, tileSize);
+    ctx.lineWidth = tileSize / 50;
+    ctx.strokeStyle = 'lime';
+    ctx.strokeRect(px, py, tileSize, tileSize);
 
-  if (!isBlueZone) {
+    if (!isBlueZone) {
+            for (let i = 0; i < 5; i++) {
+            ctx.fillStyle = 'black';
+            let bw = rand(tileSize/5, tileSize/3);
+            let bh = rand(tileSize/5, tileSize/3);
+            let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
+            let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
+            ctx.fillRect(bx, by, bw, bh);
+            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh)); 
+        }
+        
+        towerArray.push(new towerArc(px, py, tileSize / 2, Math.random() * 2 * Math.PI));
+    }
+
+    else {        
         for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = 'black';
-        let bw = rand(tileSize/5, tileSize/3);
-        let bh = rand(tileSize/5, tileSize/3);
-        let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
-        let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
-        ctx.fillRect(bx, by, bw, bh);
-        buildingBlockArray.push(new buildingBlock(bx, by, bw, bh)); 
+            ctx.fillStyle = 'black';
+            let bw = rand(tileSize/5, tileSize/3);
+            let bh = rand(tileSize/5, tileSize/3);
+            let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
+            let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
+            ctx.fillRect(bx, by, bw, bh);
+            buildingBlockArray.push(new buildingBlock(bx, by, bw, bh));
+        }
+        ctx.beginPath();
+        ctx.arc(px + tileSize / 2, py + tileSize / 2, 10, 0, 2 * Math.PI);
+        ctx.fillStyle = 'blue';
+        ctx.fill();
+        baseStation = 1;
     }
-    
-    towerArray.push(new towerArc(px, py, 40, Math.random() * 2 * Math.PI));
-  }
 
-  else {        
-    for (let i = 0; i < 5; i++) {
-        ctx.fillStyle = 'black';
-        let bw = rand(tileSize/5, tileSize/3);
-        let bh = rand(tileSize/5, tileSize/3);
-        let bx = px + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bw - 1);
-        let by = py + rand(tileSize / 10 + 1, tileSize / 10 * 9 - bh - 1);
-        ctx.fillRect(bx, by, bw, bh);
-        buildingBlockArray.push(new buildingBlock(bx, by, bw, bh));
+    if (Math.random() < 0.2 && !isBlueZone) {
+        var shardPlaced = false;
+        while (!shardPlaced) {
+            let validPlacement = true;
+            var xAttempt = Math.random() * tileSize + px;
+            var yAttempt = Math.random() * tileSize + py;
+            for (let i = 1; i <= 5; i++) {
+                let block = buildingBlockArray[buildingBlockArray.length - i];
+                if (xAttempt + shardRadius > block.x && xAttempt - shardRadius < block.x + block.width &&
+                    yAttempt + shardRadius > block.y && yAttempt - shardRadius < block.y + block.height) {
+                            validPlacement = false;
+                            break;
+                }
+            }
+            if (validPlacement) {
+                let shardInstance = new shard(xAttempt, yAttempt, shardRadius);
+                shardArray.push(shardInstance);
+                shardInstance.draw();
+                shardPlaced = true;
+            }
+        }
     }
-    ctx.beginPath();
-    ctx.arc(px + tileSize / 2, py + tileSize / 2, 10, 0, 2 * Math.PI);
-    ctx.fillStyle = 'blue';
-    ctx.fill();
-    baseStation = 1;
-  }
 }
 
 let w = 0;
@@ -268,6 +313,11 @@ function animate() {
     for (let i = 0; i < bulletArray.length; i++) {
         bulletArray[i].update();
     }
+
+    for (let i = 0; i < shardArray.length; i++) {
+        shardArray[i].update();
+    }
+
     checkBulletCollision();
     player1.update();
     timer++;
@@ -277,6 +327,8 @@ function animate() {
 var towerArray = [];
 var buildingBlockArray = [];
 var bulletArray = [];
+var shardArray = [];
+const shardRadius = 4;
 let player1 = new player(canvasAnimated.width / 2, canvasAnimated.height/ 2, 0, 0);
 
 function generateMap() {
